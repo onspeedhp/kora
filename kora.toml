@@ -34,8 +34,8 @@ allowed_programs = [
     # "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  # Associated Token Program
     # "AddressLookupTab1e1111111111111111111111111",   # Address Lookup Table Program
     # "ComputeBudget111111111111111111111111111111", # Compute Budget Program
-    "J6Big9w1VNeRZgDWH5qmNz2Nd6XFq5QeZbqC8caqSE5W",  # LazorKit Program
-    "CNT2aEgxucQjmt5SRsA6hSGrt241Bvc9zsgPvSuMjQTE",  # Default Policy Program
+    "Gsuz7YcA5sbMGVRXT3xSYhJBessW4xFC4xYsihNCqMFh",  # LazorKit Program
+    "BiE9vSdz9MidUiyjVYsu3PG4C1fbPZ8CVPADA9jRfXw7",  # Default Policy Program
     "Secp256r1SigVerify1111111111111111111111111",   # Secp256r1SigVerify Program
 ]
 allowed_tokens = [
