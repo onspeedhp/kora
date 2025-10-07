@@ -155,10 +155,9 @@ impl VersionedTransactionResolved {
             .map_err(|e| KoraError::RpcError(format!("Failed to simulate transaction: {e}")))?;
 
         if let Some(err) = simulation_result.value.err {
-            log::warn!("Transaction simulation failed: {err}");
-            return Err(KoraError::InvalidTransaction(
-                "Transaction inner instructions fetching failed.".to_string(),
-            ));
+            return Err(KoraError::InvalidTransaction(format!(
+                "Transaction simulation failed: {err}"
+            )));
         }
 
         if let Some(inner_instructions) = simulation_result.value.inner_instructions {
@@ -274,24 +273,16 @@ impl VersionedTransactionOps for VersionedTransactionResolved {
         let fee_payer = signer.solana_pubkey();
         let config = &get_config()?;
 
-        // Get the simulation result for fee calculation
-        let min_transaction_fee = FeeConfigUtil::estimate_transaction_fee(
+        let fee_calculation = FeeConfigUtil::estimate_kora_fee(
             rpc_client,
             self,
             &fee_payer,
             config.validation.is_payment_required(),
+            Some(config.validation.price_source.clone()),
         )
         .await?;
 
-        let required_lamports = config
-            .validation
-            .price
-            .get_required_lamports(
-                Some(rpc_client),
-                Some(config.validation.price_source.clone()),
-                min_transaction_fee,
-            )
-            .await?;
+        let required_lamports = fee_calculation.total_fee_lamports;
 
         // Only validate payment if not free
         if required_lamports > 0 {

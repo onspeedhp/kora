@@ -1,13 +1,18 @@
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
 use crate::{
     admin::token_util::find_missing_atas,
-    config::Token2022Config,
+    config::{SplTokenConfig, Token2022Config},
     fee::price::PriceModel,
     oracle::PriceSource,
+    signer::SignerPoolConfig,
     state::get_config,
     token::{spl_token_2022_util, token::TokenUtil},
-    validator::account_validator::{validate_account, AccountType},
+    validator::{
+        account_validator::{validate_account, AccountType},
+        cache_validator::CacheValidator,
+        signer_validator::SignerValidator,
+    },
     KoraError,
 };
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -41,6 +46,14 @@ impl ConfigValidator {
     pub async fn validate_with_result(
         rpc_client: &RpcClient,
         skip_rpc_validation: bool,
+    ) -> Result<Vec<String>, Vec<String>> {
+        Self::validate_with_result_and_signers(rpc_client, skip_rpc_validation, None::<&Path>).await
+    }
+
+    pub async fn validate_with_result_and_signers<P: AsRef<Path>>(
+        rpc_client: &RpcClient,
+        skip_rpc_validation: bool,
+        signers_config_path: Option<P>,
     ) -> Result<Vec<String>, Vec<String>> {
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
@@ -119,6 +132,15 @@ impl ConfigValidator {
             errors.push(format!("Invalid spl paid token address: {e}"));
         }
 
+        // Warn if using "All" for allowed_spl_paid_tokens
+        if matches!(config.validation.allowed_spl_paid_tokens, SplTokenConfig::All) {
+            warnings.push(
+                "⚠️  Using 'All' for allowed_spl_paid_tokens - this accepts ANY SPL token for payment. \
+                Consider using an explicit allowlist to reduce volatility risk and protect against \
+                potentially malicious or worthless tokens being used for fees.".to_string()
+            );
+        }
+
         // Validate disallowed accounts
         if let Err(e) = TokenUtil::check_valid_tokens(&config.validation.disallowed_accounts) {
             errors.push(format!("Invalid disallowed account address: {e}"));
@@ -186,6 +208,15 @@ impl ConfigValidator {
             _ => {}
         };
 
+        // Validate usage limit configuration
+        let usage_config = &config.kora.usage_limit;
+        if usage_config.enabled {
+            let (usage_errors, usage_warnings) =
+                CacheValidator::validate(usage_config).await.unwrap();
+            errors.extend(usage_errors);
+            warnings.extend(usage_warnings);
+        }
+
         // RPC validation - only if not skipped
         if !skip_rpc_validation {
             // Validate allowed programs - should be executable
@@ -234,6 +265,23 @@ impl ConfigValidator {
                     errors.push(format!("Missing ATAs for payment address: {payment_address}"));
                 }
             }
+        }
+
+        // Validate signers configuration if provided
+        if let Some(path) = signers_config_path {
+            match SignerPoolConfig::load_config(path.as_ref()) {
+                Ok(signer_config) => {
+                    let (signer_warnings, signer_errors) =
+                        SignerValidator::validate_with_result(&signer_config);
+                    warnings.extend(signer_warnings);
+                    errors.extend(signer_errors);
+                }
+                Err(e) => {
+                    errors.push(format!("Failed to load signers config: {e}"));
+                }
+            }
+        } else {
+            println!("ℹ️  Signers configuration not validated. Include --signers-config path/to/signers.toml to validate signers");
         }
 
         // Output results
@@ -296,7 +344,7 @@ mod tests {
     use crate::{
         config::{
             AuthConfig, CacheConfig, Config, EnabledMethods, FeePayerPolicy, KoraConfig,
-            MetricsConfig, SplTokenConfig, ValidationConfig,
+            MetricsConfig, SplTokenConfig, UsageLimitConfig, ValidationConfig,
         },
         fee::price::PriceConfig,
         state::update_config,
@@ -411,6 +459,7 @@ mod tests {
                 auth: AuthConfig::default(),
                 payment_address: None,
                 cache: CacheConfig::default(),
+                usage_limit: UsageLimitConfig::default(),
             },
             metrics: MetricsConfig::default(),
         };
@@ -684,6 +733,11 @@ mod tests {
 
         let result = ConfigValidator::validate_with_result(&rpc_client, true).await;
         assert!(result.is_ok());
+
+        // Check that it warns about using "All" for allowed_spl_paid_tokens
+        let warnings = result.unwrap();
+        assert!(warnings.iter().any(|w| w.contains("Using 'All' for allowed_spl_paid_tokens")));
+        assert!(warnings.iter().any(|w| w.contains("volatility risk")));
     }
 
     #[tokio::test]

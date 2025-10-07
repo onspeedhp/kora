@@ -301,12 +301,9 @@ impl TransactionValidator {
         rpc_client: &RpcClient,
         expected_payment_destination: &Pubkey,
     ) -> Result<(), KoraError> {
-        let mut total_lamport_value = 0;
-
         if TokenUtil::process_token_transfer(
             transaction_resolved,
             rpc_client,
-            &mut total_lamport_value,
             required_lamports,
             expected_payment_destination,
         )
@@ -316,7 +313,7 @@ impl TransactionValidator {
         }
 
         Err(KoraError::InvalidTransaction(format!(
-            "Insufficient token payment. Required {required_lamports} lamports, got {total_lamport_value}"
+            "Insufficient token payment. Required {required_lamports} lamports"
         )))
     }
 }
@@ -569,8 +566,11 @@ mod tests {
         let fee_payer = Pubkey::new_unique();
         let recipient = Pubkey::new_unique();
 
-        // Test with allow_sol_transfers = true (default)
-        setup_default_config();
+        // Test with allow_sol_transfers = true
+        setup_config_with_policy(FeePayerPolicy {
+            allow_sol_transfers: true,
+            ..Default::default()
+        });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -600,8 +600,8 @@ mod tests {
         let fee_payer = Pubkey::new_unique();
         let new_owner = Pubkey::new_unique();
 
-        // Test with allow_assign = true (default)
-        setup_default_config();
+        // Test with allow_assign = true
+        setup_config_with_policy(FeePayerPolicy { allow_assign: true, ..Default::default() });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -629,8 +629,11 @@ mod tests {
         let fee_payer_token_account = Pubkey::new_unique();
         let recipient_token_account = Pubkey::new_unique();
 
-        // Test with allow_spl_transfers = true (default)
-        setup_spl_token_config();
+        // Test with allow_spl_transfers = true
+        setup_spl_config_with_policy(FeePayerPolicy {
+            allow_spl_transfers: true,
+            ..Default::default()
+        });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -696,8 +699,11 @@ mod tests {
         let recipient_token_account = Pubkey::new_unique();
         let mint = Pubkey::new_unique();
 
-        // Test with allow_token2022_transfers = true (default)
-        setup_token2022_config();
+        // Test with allow_token2022_transfers = true
+        setup_token2022_config_with_policy(FeePayerPolicy {
+            allow_token2022_transfers: true,
+            ..Default::default()
+        });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -891,8 +897,8 @@ mod tests {
         let fee_payer_token_account = Pubkey::new_unique();
         let mint = Pubkey::new_unique();
 
-        // Test with allow_burn = true (default)
-        setup_spl_token_config();
+        // Test with allow_burn = true
+        setup_spl_config_with_policy(FeePayerPolicy { allow_burn: true, ..Default::default() });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -958,8 +964,11 @@ mod tests {
         let fee_payer_token_account = Pubkey::new_unique();
         let destination = Pubkey::new_unique();
 
-        // Test with allow_close_account = true (default)
-        setup_spl_token_config();
+        // Test with allow_close_account = true
+        setup_spl_config_with_policy(FeePayerPolicy {
+            allow_close_account: true,
+            ..Default::default()
+        });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -1008,8 +1017,8 @@ mod tests {
         let fee_payer_token_account = Pubkey::new_unique();
         let delegate = Pubkey::new_unique();
 
-        // Test with allow_approve = true (default)
-        setup_spl_token_config();
+        // Test with allow_approve = true
+        setup_spl_config_with_policy(FeePayerPolicy { allow_approve: true, ..Default::default() });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 
@@ -1139,8 +1148,11 @@ mod tests {
         let fee_payer_token_account = Pubkey::new_unique();
         let delegate = Pubkey::new_unique();
 
-        // Test with allow_approve = true (default)
-        setup_token2022_config();
+        // Test with allow_approve = true
+        setup_token2022_config_with_policy(FeePayerPolicy {
+            allow_approve: true,
+            ..Default::default()
+        });
 
         let validator = TransactionValidator::new(fee_payer).unwrap();
 

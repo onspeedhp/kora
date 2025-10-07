@@ -159,7 +159,7 @@ mod tests {
     #[tokio::test]
     async fn test_transfer_transaction_invalid_source() {
         let config = ConfigMockBuilder::new().build();
-        update_config(config).expect("Failed to set clean config");
+        let _ = update_config(config);
         let _ = setup_or_get_test_signer();
 
         let rpc_client = Arc::new(RpcMockBuilder::new().build());
@@ -188,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn test_transfer_transaction_invalid_destination() {
         let config = ConfigMockBuilder::new().build();
-        update_config(config).expect("Failed to set clean config");
+        let _ = update_config(config);
         let _ = setup_or_get_test_signer();
 
         let rpc_client = Arc::new(RpcMockBuilder::new().build());
@@ -216,7 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_transfer_transaction_invalid_token() {
         let config = ConfigMockBuilder::new().build();
-        update_config(config).expect("Failed to set clean config");
+        let _ = update_config(config);
         let _ = setup_or_get_test_signer();
 
         let rpc_client = Arc::new(RpcMockBuilder::new().build());
